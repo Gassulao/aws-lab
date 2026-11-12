@@ -6,6 +6,10 @@ Todo se ejecuta en el navegador: no hay ninguna llamada a AWS ni credenciales re
 
 ![Demo: login, consola, CloudShell y comandos aws](docs/img/demo.gif)
 
+Un laboratorio de la academia resolviéndose: los pasos se marcan solos a medida que el estado de la cuenta simulada cumple cada condición.
+
+![Laboratorio de S3 resolviéndose paso a paso](docs/img/demo-lab.gif)
+
 ## Por qué
 
 Preparando la certificación AWS Solutions Architect Associate (SAA-C03) quería practicar con servicios reales (IAM, VPC, EC2, S3, CloudFormation, ECS, Lambda...) sin el riesgo de olvidar un NAT Gateway encendido. Un simulador permite equivocarse, ver los errores reales de AWS (`AccessDenied`, `DependencyViolation`, `BucketNotEmpty`...) y repetir el ejercicio las veces que haga falta.
