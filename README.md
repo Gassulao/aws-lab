@@ -50,7 +50,7 @@ Servicios con página propia:
 
 Disponible en la página CloudShell y dentro de cada laboratorio:
 
-- **Bash simulado**: tuberías, variables, `$(...)`, redirecciones, here-documents, `if`/`for`/`while`, funciones y scripts, historial y autocompletado.
+- **Bash simulado**: tuberías, variables, `$(...)`, redirecciones, here-documents, `if`/`for`/`while`/`elif` y scripts, historial y autocompletado.
 - **Utilidades**: `grep`, `sed`, `awk`, `jq`, `cut`, `sort`, `uniq`, `find`, `xargs`, `curl`, `dig`, `zip`/`unzip`, `crontab`, etc.
 - **CLI `aws`** con `--query` (JMESPath), `--output json|text|table|yaml`, `file://`, sintaxis abreviada, perfiles y credenciales temporales por variables de entorno. Cubre STS, IAM, EC2, S3 (alto nivel y `s3api`), CloudTrail, KMS, Secrets Manager, CloudFormation, CloudWatch y Logs, ELBv2, Auto Scaling, Route 53, SNS, SQS, Lambda, API Gateway, DynamoDB, RDS, ECR, ECS, EKS, CodeCommit/Build/Pipeline/Deploy, Organizations, Config, Budgets, Cost Explorer y Support.
 - **Herramientas de DevOps**: `terraform` (init, validate, fmt, plan, apply, destroy, state...), `git` (con el asistente de credenciales de CodeCommit), `docker` (build, tag, push a ECR, run) y `kubectl` contra los clústeres de EKS simulados.
@@ -157,13 +157,14 @@ tests/e2e/           Recorridos con Playwright (laboratorios y consola)
 server/              Servidor mínimo para Docker (sirve dist/ y guarda el estado)
 ```
 
-Pila: React 18, TypeScript, Vite 5 y Vitest. Pruebas: 19 ficheros, 367 tests.
+Pila: React 18, TypeScript, Vite 5 y Vitest. Pruebas: 19 ficheros, 369 tests.
 
 ## Limitaciones conocidas
 
 - **Es una simulación, no AWS.** Cubre una parte de cada servicio (la que se necesita para aprender y para el SAA), no todas sus opciones ni todas sus API. Habrá comandos o parámetros que existen en AWS y aquí no.
 - **Sin tráfico real.** Las instancias no ejecutan sistemas operativos, los contenedores y los pods son modelos, y las comprobaciones de red se resuelven con las reglas simuladas de VPC, grupos de seguridad y NACL.
 - **Lambda** solo ejecuta runtimes Node.js (`nodejs18.x`, `20.x`, `22.x`) con un intérprete de JavaScript propio que admite lo habitual de un handler, pero no cualquier paquete de npm. Otros runtimes se rechazan con un error explícito.
+- **Bash simulado.** No admite definición de funciones, `case` ni subshells con paréntesis, y las tareas de `crontab` se validan pero no se ejecutan.
 - **Terraform y CloudFormation** soportan un subconjunto de recursos y funciones; las plantillas muy avanzadas pueden no funcionar.
 - **Costes y cuotas.** Los costes son estimaciones didácticas, no precios oficiales. Los límites de cuota, la consistencia eventual y muchos tiempos reales no se reproducen.
 - **Idioma.** La interfaz y los contenidos están en español; algunos textos técnicos y nombres de API se mantienen en inglés, como en AWS.
