@@ -1,0 +1,18 @@
+/* CloudWatch y SNS: solo variables del tema. */
+.cw-chart { width: 100%; height: auto; display: block; }
+.cw-chart text { fill: var(--muted); font-size: 11px; }
+.cw-chart .grid { stroke: var(--line); stroke-width: 1; }
+.cw-chart .axis { stroke: var(--line2); }
+.cw-chart .series { fill: none; stroke: var(--link, #0972d3); stroke-width: 2; }
+.cw-chart .thr { stroke: #d91515; stroke-width: 1.5; stroke-dasharray: 6 4; }
+.cw-chart .dot { fill: var(--link, #0972d3); }
+.cw-chart .empty { fill: var(--muted); font-size: 13px; }
+.cw-state { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; }
+.cw-state i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.cw-state.ALARM i { background: #d91515; }
+.cw-state.OK i { background: #037f0c; }
+.cw-state.INSUFFICIENT_DATA i { background: #8d99a8; }
+.cw-ev { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; }
+.cw-ev td:first-child { white-space: nowrap; color: var(--muted); }
+.cw-msg { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+.cw-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
