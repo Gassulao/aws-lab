@@ -1,0 +1,12 @@
+services:
+  aws-lab:
+    build: .
+    container_name: aws-lab
+    ports:
+      - "8080:8080"
+    volumes:
+      - aws-lab-data:/data
+    restart: unless-stopped
+
+volumes:
+  aws-lab-data:

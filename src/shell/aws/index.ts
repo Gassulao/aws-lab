@@ -1,0 +1,38 @@
+// Registro del comando `aws` y de todos sus servicios.
+import { registerCommand } from '../interp';
+import { runAws } from './framework';
+import './commands/sts-iam';
+import './commands/iam-extra';
+import './commands/ec2';
+import './commands/ec2-extra';
+import './commands/s3';
+import './commands/s3-extra';
+import './commands/s3-highlevel';
+import './commands/cloudtrail-admin';
+import './commands/kms';
+import './commands/secretsmanager';
+import './commands/cloudformation';
+import './commands/cloudwatch';
+import './commands/ha';
+import './commands/codecommit';
+import './commands/codebuild';
+import './commands/codepipeline';
+import './commands/codedeploy';
+import './commands/ecr';
+import './commands/ecs';
+import './commands/eks';
+import './commands/organizations';
+import './commands/configservice';
+import './commands/budgets';
+import './commands/support';
+import '../dns';
+import '../terraform/cmd';
+import '../../engine/serverless';
+import './commands/lambda';
+import './commands/sqs';
+import './commands/apigateway';
+import './commands/rds';
+import './commands/dynamodb';
+import '../zipcmd';
+
+registerCommand('aws', (args, { sh }) => runAws(sh, args));

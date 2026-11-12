@@ -1,0 +1,8 @@
+/* KMS: estilos propios (solo variables del tema). */
+.kms-policy-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.kms-sub { margin: 0 0 6px; font-weight: 700; }
+.kms-pick { max-height: 220px; overflow: auto; border: 1px solid var(--line2); background: var(--card); }
+.kms-pick label { display: flex; gap: 8px; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.kms-pick label:hover { background: var(--sel); }
+.kms-pick label:last-child { border-bottom: 0; }
+.kms-pick small { color: var(--muted); }

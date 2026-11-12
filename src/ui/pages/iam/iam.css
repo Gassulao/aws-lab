@@ -1,0 +1,48 @@
+/* Estilos locales de IAM y S3 (usan siempre variables del tema). */
+.k-tabs { display: flex; border-bottom: 1px solid var(--line2); padding: 0 20px; gap: 24px; overflow-x: auto; }
+.k-tabs a { padding: 12px 0; color: var(--muted); font-weight: 700; border-bottom: 3px solid transparent; white-space: nowrap; }
+.k-tabs a.on { color: var(--link); border-color: var(--link); }
+.k-tabs a:hover { text-decoration: none; color: var(--text); }
+.k-menu { position: relative; display: inline-block; }
+.k-menu > .k-menu-list { position: absolute; right: 0; top: 36px; min-width: 220px; background: var(--card); border: 1px solid var(--line2); box-shadow: 0 4px 12px rgba(0,0,0,.25); z-index: 30; }
+.k-menu .k-menu-list div { padding: 8px 14px; cursor: pointer; color: var(--text); }
+.k-menu .k-menu-list div:hover { background: var(--sel); }
+.k-menu .k-menu-list div.dis { color: var(--muted); cursor: not-allowed; opacity: .6; }
+.k-two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.k-three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 24px; }
+.k-dl .k { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+.k-dl .v { word-break: break-word; }
+.k-code { width: 100%; min-height: 280px; font-family: Menlo, Consolas, monospace; font-size: 13px; line-height: 18px; border: 1px solid var(--line2); border-radius: 2px; padding: 8px 10px; background: var(--card); color: var(--text); resize: vertical; tab-size: 2; }
+.k-pre { background: var(--bg); border: 1px solid var(--line); padding: 10px 14px; font-family: Menlo, Consolas, monospace; font-size: 12.5px; line-height: 18px; overflow: auto; max-height: 420px; white-space: pre; margin: 0; color: var(--text); }
+.k-wiz { display: grid; grid-template-columns: 220px 1fr; gap: 28px; align-items: start; }
+.k-steps { position: sticky; top: 8px; }
+.k-steps .st { padding: 6px 0 6px 14px; border-left: 2px solid var(--line2); color: var(--muted); margin-bottom: 4px; }
+.k-steps .st small { display: block; font-size: 11px; font-weight: 700; }
+.k-steps .st.on { border-color: var(--link); color: var(--link); font-weight: 700; }
+.k-steps .st.done { border-color: var(--ok); color: var(--text); }
+.k-tile { border: 1px solid var(--line2); padding: 12px 16px; border-radius: 2px; cursor: pointer; display: flex; gap: 10px; background: var(--card); margin-bottom: 8px; }
+.k-tile.on { border-color: var(--link); background: var(--sel); box-shadow: inset 0 0 0 1px var(--link); }
+.k-tile small { display: block; color: var(--muted); }
+.k-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.k-tiles .k-tile { margin: 0; }
+.k-secret { font-family: Menlo, Consolas, monospace; background: var(--bg); border: 1px solid var(--line2); padding: 6px 10px; word-break: break-all; border-radius: 2px; }
+.k-rec { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+.k-rec:last-child { border-bottom: 0; }
+.k-rec .ic { width: 20px; flex: none; font-weight: 800; text-align: center; }
+.k-rec .ic.ok { color: var(--ok); } .k-rec .ic.warn { color: var(--warn); } .k-rec .ic.err { color: var(--err); }
+.k-rec small { display: block; color: var(--muted); }
+.k-foot { display: flex; gap: 8px; justify-content: flex-end; margin: 6px 0 20px; }
+.k-tag-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.k-tag-row input { flex: 1; max-width: 260px; height: 32px; border: 1px solid var(--line2); border-radius: 2px; padding: 0 10px; background: var(--card); color: var(--text); font: inherit; }
+.k-input { height: 32px; border: 1px solid var(--line2); border-radius: 2px; padding: 0 10px; background: var(--card); color: var(--text); font: inherit; width: 100%; max-width: 560px; }
+.k-select { height: 32px; border: 1px solid var(--line2); border-radius: 2px; padding: 0 8px; background: var(--card); color: var(--text); font: inherit; }
+.k-warnbox { border: 1px solid var(--warn); background: var(--sel); padding: 10px 14px; border-radius: 2px; margin: 10px 0; }
+.k-switch { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
+.k-muted { color: var(--muted); }
+.k-badge { display: inline-block; font-size: 12px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--line2); color: var(--muted); }
+.k-badge.ok { color: var(--ok); border-color: var(--ok); } .k-badge.err { color: var(--err); border-color: var(--err); } .k-badge.warn { color: var(--warn); border-color: var(--warn); }
+.k-sub { display: flex; gap: 6px; align-items: center; margin: 0 0 8px; }
+.k-fold { color: var(--link); cursor: pointer; }
+.k-dropzone { border: 2px dashed var(--line2); padding: 22px; text-align: center; border-radius: 2px; color: var(--muted); }
+.k-dropzone.over { border-color: var(--link); background: var(--sel); }
+.k-pager { display: flex; justify-content: flex-end; gap: 10px; align-items: center; padding: 8px 20px; color: var(--muted); }

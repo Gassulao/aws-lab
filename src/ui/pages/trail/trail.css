@@ -1,0 +1,15 @@
+.ct-filter { padding: 12px 20px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.ct-filter label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+.ct-filter select, .ct-filter input[type=text], .ct-filter input[type=datetime-local] { height: 32px; border: 1px solid var(--line2); border-radius: 2px; padding: 0 8px; background: var(--card); color: var(--text); font-size: 14px; font-family: inherit; }
+.ct-filter input[type=text] { min-width: 280px; }
+.ct-filter .grow { flex: 1; }
+.ct-json { background: #0f141a; color: #e9ebed; border-radius: 2px; padding: 12px 16px; font-family: Menlo, Consolas, monospace; font-size: 12.5px; line-height: 18px; overflow: auto; max-height: 520px; white-space: pre; margin: 0; }
+.ct-json .k { color: #7cc4f5; } .ct-json .s { color: #a5d6a7; } .ct-json .n { color: #f2c46d; } .ct-json .l { color: #d291e8; }
+.ct-err { color: var(--err); font-weight: 700; }
+.ct-errbox { border-left: 4px solid var(--err); background: var(--card); padding: 10px 14px; margin-bottom: 16px; box-shadow: 0 1px 1px rgba(0,28,36,.3); }
+.ct-errbox code { color: var(--err); font-weight: 700; }
+.ct-kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 24px; }
+.ct-kv .k { font-size: 12px; font-weight: 700; color: var(--muted); margin-bottom: 2px; }
+.ct-kv .v { word-break: break-all; }
+.ct-note { padding: 8px 20px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); }
+tr.ct-row-err td:first-child { box-shadow: inset 3px 0 0 var(--err); }

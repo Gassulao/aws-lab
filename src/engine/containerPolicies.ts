@@ -1,0 +1,18 @@
+// Políticas gestionadas de AWS para contenedores (documentos reales simplificados).
+import type { IamPolicy, PolicyDocument } from './types';
+
+const mp = (name: string, doc: PolicyDocument, description: string, path = '/'): Omit<IamPolicy, 'attachmentCount' | 'createdAt' | 'id'> => ({ arn: `arn:aws:iam::aws:policy${path}${name}`, name, path, managed: 'aws', defaultVersion: 'v1', document: doc, description });
+const allow = (action: string[], resource: string | string[] = '*') => ({ Effect: 'Allow' as const, Action: action, Resource: resource });
+const ECR_READ = ['ecr:GetAuthorizationToken', 'ecr:BatchCheckLayerAvailability', 'ecr:GetDownloadUrlForLayer', 'ecr:GetRepositoryPolicy', 'ecr:DescribeRepositories', 'ecr:ListImages', 'ecr:DescribeImages', 'ecr:BatchGetImage', 'ecr:GetLifecyclePolicy', 'ecr:GetLifecyclePolicyPreview', 'ecr:ListTagsForResource', 'ecr:DescribeImageScanFindings'];
+const ECR_WRITE = ['ecr:InitiateLayerUpload', 'ecr:UploadLayerPart', 'ecr:CompleteLayerUpload', 'ecr:PutImage'];
+
+export const CONTAINER_POLICIES = [
+  mp('AmazonEC2ContainerRegistryReadOnly', { Version: '2012-10-17', Statement: [allow(ECR_READ)] }, 'Provides read-only access to Amazon EC2 Container Registry repositories.'),
+  mp('AmazonEC2ContainerRegistryPowerUser', { Version: '2012-10-17', Statement: [allow([...ECR_READ, ...ECR_WRITE])] }, 'Provides full access to Amazon EC2 Container Registry repositories, but does not allow repository deletion or policy changes.'),
+  mp('AmazonEC2ContainerRegistryFullAccess', { Version: '2012-10-17', Statement: [allow(['ecr:*', 'cloudtrail:LookupEvents'])] }, 'Provides administrative access to Amazon ECR resources.'),
+  mp('AmazonECSTaskExecutionRolePolicy', { Version: '2012-10-17', Statement: [allow(['ecr:GetAuthorizationToken', 'ecr:BatchCheckLayerAvailability', 'ecr:GetDownloadUrlForLayer', 'ecr:BatchGetImage', 'logs:CreateLogStream', 'logs:PutLogEvents'])] }, 'Provides access to other AWS service resources that are required to run Amazon ECS tasks.', '/service-role/'),
+  mp('AmazonECS_FullAccess', { Version: '2012-10-17', Statement: [allow(['ecs:*', 'ec2:Describe*', 'elasticloadbalancing:*', 'iam:PassRole', 'iam:ListRoles', 'logs:*', 'application-autoscaling:*', 'cloudwatch:*'])] }, 'Provides administrative access to Amazon ECS resources.'),
+  mp('AmazonEKSClusterPolicy', { Version: '2012-10-17', Statement: [allow(['ec2:Describe*', 'ec2:CreateNetworkInterface', 'ec2:DeleteNetworkInterface', 'elasticloadbalancing:*', 'autoscaling:Describe*', 'kms:DescribeKey'])] }, 'This policy provides Kubernetes the permissions it requires to manage resources on your behalf.'),
+  mp('AmazonEKSWorkerNodePolicy', { Version: '2012-10-17', Statement: [allow(['ec2:DescribeInstances', 'ec2:DescribeInstanceTypes', 'ec2:DescribeRouteTables', 'ec2:DescribeSecurityGroups', 'ec2:DescribeSubnets', 'ec2:DescribeVolumes', 'ec2:DescribeVolumesModifications', 'ec2:DescribeVpcs', 'eks:DescribeCluster'])] }, 'This policy allows Amazon EKS worker nodes to connect to Amazon EKS Clusters.'),
+  mp('AmazonEKS_CNI_Policy', { Version: '2012-10-17', Statement: [allow(['ec2:AssignPrivateIpAddresses', 'ec2:AttachNetworkInterface', 'ec2:CreateNetworkInterface', 'ec2:DeleteNetworkInterface', 'ec2:DescribeInstances', 'ec2:DescribeTags', 'ec2:DescribeNetworkInterfaces', 'ec2:DescribeInstanceTypes', 'ec2:DetachNetworkInterface', 'ec2:ModifyNetworkInterfaceAttribute', 'ec2:UnassignPrivateIpAddresses'])] }, 'This policy provides the Amazon VPC CNI Plugin (amazon-vpc-cni-k8s) the permissions it requires to modify the IP address configuration on your EKS worker nodes.'),
+];

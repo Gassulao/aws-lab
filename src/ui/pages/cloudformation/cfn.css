@@ -1,0 +1,5 @@
+/* CloudFormation: estilos propios (solo variables del tema). */
+.cf-tpl { width: 100%; min-height: 320px; font-family: Menlo, Consolas, monospace; font-size: 12.5px; background: var(--bg); color: var(--text); border: 1px solid var(--line2); padding: 10px; resize: vertical; box-sizing: border-box; }
+.cf-reason { color: var(--muted); max-width: 520px; word-break: break-word; }
+.cf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cf-chk { display: flex; gap: 8px; align-items: center; margin: 4px 0; }

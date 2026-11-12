@@ -1,0 +1,16 @@
+/* Contenedores (ECR / ECS / EKS): solo variables del tema. */
+.ct-muted { color: var(--muted); }
+.ct-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ct-pre { background: var(--card); border: 1px solid var(--line2); padding: 10px 12px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; white-space: pre-wrap; overflow: auto; margin: 0; color: var(--text); }
+.ct-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line2); margin: 12px 0; }
+.ct-tabs a { padding: 8px 16px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; }
+.ct-tabs a.on { color: var(--link, var(--text)); border-bottom-color: var(--link, var(--text)); font-weight: 700; }
+.ct-events { list-style: none; margin: 0; padding: 0; }
+.ct-events li { display: grid; grid-template-columns: 210px 1fr; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.ct-events li:last-child { border-bottom: 0; }
+.ct-sev { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.ct-sev span { padding: 1px 8px; border: 1px solid var(--line2); font-size: 12px; }
+.ct-sev .CRITICAL { background: #d13212; color: #fff; border-color: #d13212; }
+.ct-sev .HIGH { background: #ec7211; color: #fff; border-color: #ec7211; }
+.ct-sev .MEDIUM { color: #8d6605; border-color: #8d6605; }
+.ct-form input[type=text], .ct-form input[type=number], .ct-form select { width: 100%; box-sizing: border-box; }

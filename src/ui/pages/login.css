@@ -1,0 +1,34 @@
+/* Pantalla de inicio de sesión: usa las variables de tema de la consola (claro / oscuro). */
+.lg-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg); color: var(--text); font-family: var(--font-console, var(--font)); }
+.lg-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px 16px 20px; gap: 18px; }
+.lg-brand { color: var(--text); } .lg-brand .awsmark { width: 92px; height: 60px; color: var(--text); }
+.lg-card { width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--line); border-radius: 4px; box-shadow: var(--card-shadow); padding: 28px 32px 24px; box-sizing: border-box; }
+[data-theme="dark"] .lg-card { border-color: var(--line); }
+.lg-card h1 { font-size: 28px; line-height: 34px; font-weight: 400; margin: 0 0 18px; }
+.lg-opts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.lg-opt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; }
+.lg-opt:hover { background: var(--hover); }
+.lg-opt.on { border-color: var(--link); background: var(--sel); box-shadow: 0 0 0 1px var(--link); }
+.lg-opt input { margin: 3px 0 0; flex: none; }
+.lg-opt b { display: block; font-size: 14px; }
+.lg-opt small { display: block; color: var(--muted); font-size: 12px; line-height: 16px; margin-top: 2px; }
+.lg-field { margin-bottom: 14px; }
+.lg-field label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.lg-field input { width: 100%; box-sizing: border-box; height: 36px; font-size: 14px; }
+.lg-field.bad input { border-color: var(--err); box-shadow: 0 0 0 1px var(--err); }
+.lg-err { color: var(--err); font-size: 12px; line-height: 16px; margin-top: 4px; }
+.lg-check { display: flex; align-items: center; font-size: 13px; margin: -4px 0 14px; cursor: pointer; }
+.lg-hint { background: var(--sel); border-left: 3px solid var(--link); margin: 0 0 14px; padding: 6px 10px; font-size: 12px; line-height: 17px; }
+.lg-primary { width: 100%; height: 40px; border: 1px solid var(--orange); background: var(--orange); color: #0f141a; font-size: 15px; font-weight: 700; border-radius: 20px; cursor: pointer; font-family: inherit; }
+.lg-primary:hover { background: var(--orange-h); border-color: var(--orange-h); }
+.lg-primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.lg-links { text-align: center; margin: 14px 0 4px; font-size: 14px; }
+.lg-sim { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; line-height: 17px; color: var(--muted); }
+.lg-foot { padding: 14px 20px 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); background: var(--card); }
+.lg-legal { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; }
+.lg-theme { display: inline-flex; }
+.lg-theme button { border: 1px solid var(--line2); background: var(--card); color: var(--text); font: inherit; font-size: 12px; padding: 3px 12px; margin-left: -1px; cursor: pointer; }
+.lg-theme button:first-child { margin-left: 0; border-radius: 3px 0 0 3px; } .lg-theme button:last-child { border-radius: 0 3px 3px 0; }
+.lg-theme button.on { background: var(--link); border-color: var(--link); color: #fff; font-weight: 700; position: relative; }
+[data-theme="dark"] .lg-theme button.on { color: #0f141a; }
+@media (max-width: 480px) { .lg-card { padding: 22px 18px; } }

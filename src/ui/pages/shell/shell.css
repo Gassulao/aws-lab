@@ -1,0 +1,51 @@
+.cs-wrap { border: 1px solid var(--line2); border-radius: 2px; background: #0f141a; overflow: hidden; box-shadow: 0 1px 1px rgba(0,28,36,.3); }
+.cs-bar { display: flex; align-items: stretch; background: #161d26; border-bottom: 1px solid #2a2f37; min-height: 36px; color: #d1d5db; font-size: 13px; }
+.cs-tab { display: flex; align-items: center; gap: 8px; padding: 0 16px; background: #0f141a; border-top: 2px solid #539fe5; color: #e9ebed; font-weight: 700; }
+.cs-tab .dot { width: 8px; height: 8px; border-radius: 50%; background: #5fd38d; display: inline-block; }
+.cs-bar .sp { flex: 1; }
+.cs-bar button { background: none; border: 0; color: #d1d5db; padding: 0 12px; cursor: pointer; font-size: 13px; }
+.cs-bar button:hover { background: #2a3b50; color: #fff; }
+.cs-term { background: #0f141a; color: #e9ebed; font-family: Menlo, Consolas, "Courier New", monospace; font-size: 13px; line-height: 19px; padding: 10px 14px; overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-break: break-word; cursor: text; }
+.cs-term .cs-row { min-height: 19px; }
+.cs-term .cs-prompt { color: #5fd38d; flex: none; }
+.cs-term .cs-cmd { color: #ffffff; }
+.cs-term .cs-err { color: #ff8b8b; }
+.cs-term .cs-info { color: #8fb4d9; }
+.cs-term .cs-ok { color: #5fd38d; }
+.cs-term .cs-key { color: #7cc4f5; }
+.cs-term .cs-str { color: #a5d6a7; }
+.cs-term .cs-num { color: #f2c46d; }
+.cs-term .cs-lit { color: #d291e8; }
+.cs-term .cs-input { display: flex; gap: 8px; align-items: flex-start; }
+.cs-term .cs-input input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: #fff; font: inherit; caret-color: #5fd38d; caret-shape: block; padding: 0; height: 19px; }
+.cs-term .cs-input.busy input { opacity: .5; }
+.cs-foot { background: #161d26; border-top: 1px solid #2a2f37; color: #9ba7b6; font-size: 11px; padding: 3px 14px; display: flex; gap: 16px; }
+
+.cs-term .ansi-b { font-weight: 700; }
+.cs-term .ansi-dim { opacity: 0.6; }
+.cs-term .ansi-c1 { color: #ff6b6b; }
+.cs-term .ansi-c2 { color: #6fdc8c; }
+.cs-term .ansi-c3 { color: #f5d76e; }
+.cs-term .ansi-c6 { color: #6fd6e6; }
+
+/* Barra de título de CloudShell (página): minimizar, maximizar y cerrar. Se adapta al tema claro/oscuro. */
+.cs-title { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 4px 0 14px; background: var(--card); color: var(--text); border-bottom: 1px solid var(--line2); font-size: 14px; position: relative; z-index: 2; }
+.cs-title .sp { flex: 1; }
+.cs-name { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+.cs-region { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); border: 1px solid var(--line2); border-radius: 10px; padding: 1px 9px; }
+.cs-region .dot, .cs-title .dot { width: 8px; height: 8px; border-radius: 50%; background: #1f9d55; display: inline-block; }
+.cs-actions { position: relative; }
+.cs-act, .cs-win { background: none; border: 0; color: var(--text); cursor: pointer; font: inherit; border-radius: 3px; }
+.cs-act { display: inline-flex; align-items: center; gap: 4px; height: 30px; padding: 0 10px; font-weight: 700; font-size: 13px; }
+.cs-act:hover, .cs-act[aria-expanded=true], .cs-win:hover { background: var(--hover); }
+.cs-win { width: 34px; height: 32px; display: inline-flex; align-items: center; justify-content: center; }
+.cs-win.cs-close:hover { background: #d13212; color: #fff; }
+.cs-title button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.cs-menu { position: absolute; left: 0; top: 34px; min-width: 250px; background: var(--dd-bg); color: var(--text); border: 1px solid var(--line2); box-shadow: var(--shadow); z-index: 90; padding: 4px 0; }
+.cs-menu button { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 16px; background: none; border: 0; color: inherit; font: inherit; font-size: 14px; text-align: left; padding: 7px 14px; cursor: pointer; }
+.cs-menu button:hover { background: var(--sel); }
+.cs-menu kbd { font: 11px/16px var(--font); color: var(--muted); border: 1px solid var(--line2); border-radius: 3px; padding: 0 5px; }
+.cs-menu hr { margin: 4px 0; }
+.cs-wrap.min .cs-title { border-bottom: 0; }
+.cs-wrap.max { position: fixed; left: 0; right: 0; top: 104px; bottom: 32px; z-index: 60; display: flex; flex-direction: column; border-radius: 0; }
+.cs-wrap.max .cs-term { flex: 1; min-height: 0; height: auto !important; }

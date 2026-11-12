@@ -1,0 +1,232 @@
+import { SAA_DOMAINS, type Level } from '../types';
+import { prep, profileFor } from '../setup';
+import cuenta from './l01/1-cuenta.md?raw';
+import politicas from './l01/2-politicas.md?raw';
+import roles from './l01/3-roles-sts.md?raw';
+import limites from './l01/4-limites-claves.md?raw';
+
+const ACC = 'ACC=$(aws sts get-caller-identity --query Account --output text)';
+
+export const l01: Level = {
+  id: 1,
+  slug: 'cuenta-iam',
+  title: 'Tu cuenta y IAM',
+  subtitle: 'Identidades, permisos y roles: la base de todo en AWS',
+  skills: ['Usuarios, grupos y políticas', 'Deny explícito y condiciones', 'Diagnóstico con el simulador', 'Roles, STS, ExternalId y MFA', 'Límites de permisos y rotación de claves'],
+  lessons: [
+    { id: 'l01-cuenta', title: 'La cuenta, el usuario raíz y las identidades', minutes: 6, body: cuenta },
+    { id: 'l01-politicas', title: 'Políticas: cómo decide IAM', minutes: 9, body: politicas },
+    { id: 'l01-roles', title: 'Roles y credenciales temporales (STS)', minutes: 8, body: roles },
+    { id: 'l01-limites', title: 'Límites de permisos y rotación de claves', minutes: 7, body: limites },
+  ],
+  exercises: [
+    {
+      id: 'l01-e1',
+      title: 'Crea un usuario con permisos mínimos',
+      summary: 'Grupo, política administrada y usuario de solo lectura, verificado con el simulador.',
+      difficulty: 'Fácil',
+      minutes: 10,
+      saa: [SAA_DOMAINS[1]],
+      tags: ['IAM', 'Grupos', 'Mínimo privilegio'],
+      scenario: 'Entra una persona nueva al equipo de datos. Debe poder **leer** en S3 pero no modificar nada. Aplica el principio de **mínimo privilegio** dando los permisos a un **grupo** (no al usuario) y comprueba el resultado antes de entregar la cuenta.',
+      steps: [
+        { id: 'g', title: 'Crea el grupo `datos`', hint: ['Los grupos se crean con `aws iam create-group`.', 'aws iam create-group --group-name datos'], check: (c) => !!c.group('datos') || 'Aún no existe el grupo datos.' },
+        { id: 'p', title: 'Adjunta la política administrada `AmazonS3ReadOnlyAccess` al grupo', hint: ['Una política administrada por AWS se identifica por su ARN: `arn:aws:iam::aws:policy/<Nombre>`.', 'aws iam attach-group-policy --group-name datos --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'], check: (c) => !!c.group('datos')?.attached.some((a) => a.endsWith('/AmazonS3ReadOnlyAccess')) || 'El grupo no tiene la política de solo lectura.' },
+        { id: 'u', title: 'Crea el usuario `lucia` y añádelo al grupo', hint: ['Primero `create-user`, luego `add-user-to-group`.', 'aws iam create-user --user-name lucia && aws iam add-user-to-group --group-name datos --user-name lucia'], check: (c) => (!!c.user('lucia') && !!c.group('datos')?.members.includes('lucia')) || 'lucia no está en el grupo datos.' },
+        {
+          id: 'sim', title: 'Comprueba con `simulate-principal-policy` qué puede hacer `lucia`: `s3:GetObject` sí, `s3:PutObject` no',
+          hint: ['Necesitas el ARN del usuario: `aws iam get-user --user-name lucia --query User.Arn --output text`.', 'aws iam simulate-principal-policy --policy-source-arn <ARN de lucia> --action-names s3:GetObject s3:PutObject'],
+          check: (c) => c.trail('SimulatePrincipalPolicy').some((e) => String(e.requestParameters?.PolicySourceArn ?? '').endsWith('/lucia')) || 'Aún no has simulado los permisos de lucia.',
+        },
+      ],
+      script: [
+        'aws iam create-group --group-name datos',
+        'aws iam attach-group-policy --group-name datos --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess',
+        'aws iam create-user --user-name lucia',
+        'aws iam add-user-to-group --group-name datos --user-name lucia',
+        "aws iam simulate-principal-policy --policy-source-arn $(aws iam get-user --user-name lucia --query User.Arn --output text) --action-names s3:GetObject s3:PutObject --query 'EvaluationResults[].[EvalActionName,EvalDecision]' --output text",
+      ],
+      realWorld: 'Haz lo mismo en tu cuenta real y comprueba con `aws iam list-groups-for-user --user-name lucia`. En tu laboratorio **aws-secure-infrastructure** el equivalente en Terraform es `aws_iam_group` + `aws_iam_group_policy_attachment`: los permisos viven en grupos, nunca en usuarios sueltos. **Limpieza:** IAM es gratis, pero borra el usuario (`remove-user-from-group`, `detach-group-policy`, `delete-user`) para no dejar identidades olvidadas.',
+    },
+    {
+      id: 'l01-e2',
+      title: 'Política con condición y Deny explícito',
+      summary: 'Lectura libre, escritura solo desde la oficina y borrado prohibido, comprobado con el simulador.',
+      difficulty: 'Media',
+      minutes: 15,
+      saa: [SAA_DOMAINS[1]],
+      tags: ['IAM', 'Políticas', 'Condiciones', 'S3'],
+      scenario: 'Finanzas guarda documentos en el bucket `finanzas-docs`. Marta debe poder **leer** siempre, **escribir solo desde la red de la oficina** (`198.51.100.0/24`) y **no borrar nunca**, ni aunque algún día alguien le dé más permisos. Desde CloudShell sales por la IP `203.0.113.10`, que no es la de la oficina.',
+      steps: [
+        { id: 'pol', title: 'Crea la política `FinanzasControlada` con un `Allow` de `s3:GetObject` sobre `finanzas-docs/*`', hint: ['La política va en JSON entre comillas simples: `--policy-document \'{"Version":"2012-10-17","Statement":[...]}\'`.', 'Recurso de objetos: arn:aws:s3:::finanzas-docs/*'], check: (c) => (c.stmtCovers(c.statements('FinanzasControlada'), 'Allow', 's3:GetObject') ? true : 'La política no existe o no permite s3:GetObject.') },
+        { id: 'cond', title: 'Añade un `Allow` de `s3:PutObject` con la condición `IpAddress` sobre `aws:SourceIp`', hint: ['Sentencia con `"Condition":{"IpAddress":{"aws:SourceIp":"198.51.100.0/24"}}`.'], check: (c) => c.stmtCovers(c.statements('FinanzasControlada'), 'Allow', 's3:PutObject', (st) => /aws:sourceip/i.test(JSON.stringify(st.Condition ?? {}))) || 'Falta un Allow de s3:PutObject con condición de IP.' },
+        { id: 'deny', title: 'Añade un `Deny` explícito de `s3:DeleteObject`', hint: ['Un `Deny` sin condiciones gana a cualquier `Allow`. Incluye también `s3:DeleteObjectVersion`.'], check: (c) => c.stmtCovers(c.statements('FinanzasControlada'), 'Deny', 's3:DeleteObject') || 'Falta el Deny de s3:DeleteObject.' },
+        { id: 'user', title: 'Crea el usuario `marta` y adjúntale la política', hint: ['Las políticas propias se identifican con `arn:aws:iam::<cuenta>:policy/<Nombre>`. Obtén la cuenta con `aws sts get-caller-identity --query Account --output text`.'], check: (c) => c.userHas('marta', 'FinanzasControlada') || 'marta no tiene la política FinanzasControlada.' },
+        {
+          id: 'sim', title: 'Simula `s3:GetObject`, `s3:PutObject` y `s3:DeleteObject` sobre `arn:aws:s3:::finanzas-docs/informe.pdf` y comprueba que dan `allowed`, `implicitDeny` y `explicitDeny`',
+          hint: ['Usa `--resource-arns` para indicar el objeto concreto.', 'PutObject sale `implicitDeny` porque tu IP no es la de la oficina; DeleteObject sale `explicitDeny`.'],
+          check: (c) => {
+            if (!c.trail('SimulatePrincipalPolicy').some((e) => String(e.requestParameters?.PolicySourceArn ?? '').endsWith('/marta'))) return 'Aún no has simulado los permisos de marta.';
+            const r = 'arn:aws:s3:::finanzas-docs/informe.pdf';
+            return (c.decide('marta', 's3:GetObject', r) === 'Allow' && c.decide('marta', 's3:PutObject', r) === 'ImplicitDeny' && c.decide('marta', 's3:DeleteObject', r) === 'ExplicitDeny') || 'Con tu política, GetObject debe permitirse, PutObject quedar sin permiso desde esta IP y DeleteObject estar prohibido.';
+          },
+        },
+      ],
+      script: [
+        ACC,
+        `aws iam create-policy --policy-name FinanzasControlada --policy-document '{"Version":"2012-10-17","Statement":[{"Sid":"Leer","Effect":"Allow","Action":"s3:GetObject","Resource":"arn:aws:s3:::finanzas-docs/*"},{"Sid":"EscribirDesdeOficina","Effect":"Allow","Action":"s3:PutObject","Resource":"arn:aws:s3:::finanzas-docs/*","Condition":{"IpAddress":{"aws:SourceIp":"198.51.100.0/24"}}},{"Sid":"NuncaBorrar","Effect":"Deny","Action":["s3:DeleteObject","s3:DeleteObjectVersion"],"Resource":"arn:aws:s3:::finanzas-docs/*"}]}'`,
+        'aws iam create-user --user-name marta',
+        'aws iam attach-user-policy --user-name marta --policy-arn arn:aws:iam::$ACC:policy/FinanzasControlada',
+        "aws iam simulate-principal-policy --policy-source-arn arn:aws:iam::$ACC:user/marta --action-names s3:GetObject s3:PutObject s3:DeleteObject --resource-arns arn:aws:s3:::finanzas-docs/informe.pdf --query 'EvaluationResults[].[EvalActionName,EvalDecision]' --output text",
+      ],
+      realWorld: 'En tu cuenta real el simulador (`aws iam simulate-principal-policy` o la consola «IAM Policy Simulator») también te deja fijar la IP de origen para probar la condición. Es la misma lógica que usas en **aws-secure-infrastructure** para denegar con `aws:SecureTransport` o `aws:SourceIp`. **Limpieza:** `detach-user-policy`, `delete-policy`, `delete-user`. No cuesta dinero, pero deja la cuenta ordenada.',
+    },
+    {
+      id: 'l01-e3',
+      title: 'Diagnostica un AccessDenied',
+      summary: 'Pablo no puede listar buckets: encuentra qué política se lo impide y arréglalo.',
+      difficulty: 'Media',
+      minutes: 15,
+      saa: [SAA_DOMAINS[1]],
+      tags: ['IAM', 'Simulador', 'CloudTrail', 'Diagnóstico'],
+      scenario: 'Pablo (equipo de soporte) escribe: *«`aws s3 ls` me da AccessDenied desde ayer»*. Su perfil `pablo` ya está configurado en la terminal. Sabes que su grupo tiene `AmazonS3ReadOnlyAccess`, así que algo más está interfiriendo. **Reproduce el error, encuentra la causa con el simulador y CloudTrail, arréglalo y comprueba que Pablo puede listar los buckets.**',
+      setup: async (sh) => {
+        await prep(sh, [
+          ACC,
+          'aws iam create-user --user-name pablo',
+          'aws iam create-group --group-name soporte',
+          'aws iam add-user-to-group --group-name soporte --user-name pablo',
+          'aws iam attach-group-policy --group-name soporte --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess',
+          `aws iam create-policy --policy-name BloqueoTemporalS3 --policy-document '{"Version":"2012-10-17","Statement":[{"Sid":"IncidenteMarzo","Effect":"Deny","Action":"s3:List*","Resource":"*"}]}'`,
+          'aws iam attach-user-policy --user-name pablo --policy-arn arn:aws:iam::$ACC:policy/BloqueoTemporalS3',
+          ...profileFor('pablo'),
+        ]);
+      },
+      steps: [
+        { id: 'repro', title: 'Reproduce el error: ejecuta `aws s3 ls --profile pablo`', check: (c) => c.trailBy('pablo', 'ListBuckets', { error: 'AccessDenied' }).length > 0 || 'Aún no has reproducido el AccessDenied con el perfil pablo.' },
+        { id: 'sim', title: 'Pregunta a IAM con `simulate-principal-policy` por `s3:ListAllMyBuckets` de `pablo`', hint: ['Obtén el ARN con `aws iam get-user --user-name pablo --query User.Arn --output text`.', 'El resultado debería ser `explicitDeny`: no falta un permiso, sobra una prohibición.'], check: (c) => c.trail('SimulatePrincipalPolicy').some((e) => String(e.requestParameters?.PolicySourceArn ?? '').endsWith('/pablo')) || 'Aún no has simulado los permisos de pablo.' },
+        { id: 'ct', title: 'Busca en CloudTrail quién adjuntó una política a Pablo (`AttachUserPolicy`)', hint: ['aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=AttachUserPolicy'], check: (c) => c.ran(/cloudtrail\s+lookup-events/) || 'Aún no has consultado CloudTrail.' },
+        { id: 'fix', title: 'Elimina la causa sin tocar el grupo: quita de `pablo` la política que lo bloquea', hint: ['`aws iam list-attached-user-policies --user-name pablo` te dice qué tiene adjunto.', 'aws iam detach-user-policy --user-name pablo --policy-arn arn:aws:iam::<cuenta>:policy/BloqueoTemporalS3'], check: (c) => (!c.userHas('pablo', 'BloqueoTemporalS3') && c.decide('pablo', 's3:ListAllMyBuckets') === 'Allow') || 'Pablo sigue sin poder hacer s3:ListAllMyBuckets.' },
+        { id: 'ok', title: 'Verifica que `aws s3 ls --profile pablo` ya funciona', check: (c) => c.trailBy('pablo', 'ListBuckets', { error: false }).length > 0 || 'Aún no has comprobado que Pablo puede listar los buckets.' },
+      ],
+      script: [
+        'aws s3 ls --profile pablo || echo "AccessDenied reproducido"',
+        'aws iam simulate-principal-policy --policy-source-arn $(aws iam get-user --user-name pablo --query User.Arn --output text) --action-names s3:ListAllMyBuckets --query \'EvaluationResults[].[EvalActionName,EvalDecision]\' --output text',
+        "aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=AttachUserPolicy --query 'Events[].[EventName,Username]' --output text",
+        "aws iam list-attached-user-policies --user-name pablo --query 'AttachedPolicies[].PolicyName' --output text",
+        'aws iam detach-user-policy --user-name pablo --policy-arn $(aws iam list-policies --scope Local --query "Policies[?PolicyName==\'BloqueoTemporalS3\'].Arn" --output text)',
+        'aws s3 ls --profile pablo',
+      ],
+      solution: 'El mensaje de error dice «with an explicit deny in an identity-based policy»: **no falta un Allow, sobra un Deny**. El simulador lo confirma con `explicitDeny`, `list-attached-user-policies` muestra `BloqueoTemporalS3` y CloudTrail (`AttachUserPolicy`) revela que alguien la puso durante un incidente. Se arregla quitándola del usuario.\n\n```bash\naws s3 ls --profile pablo\naws iam simulate-principal-policy --policy-source-arn $(aws iam get-user --user-name pablo --query User.Arn --output text) --action-names s3:ListAllMyBuckets --query \'EvaluationResults[].[EvalActionName,EvalDecision]\' --output text\naws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,AttributeValue=AttachUserPolicy --query \'Events[].[EventName,Username]\' --output text\naws iam list-attached-user-policies --user-name pablo --query \'AttachedPolicies[].PolicyName\' --output text\naws iam detach-user-policy --user-name pablo --policy-arn $(aws iam list-policies --scope Local --query "Policies[?PolicyName==\'BloqueoTemporalS3\'].Arn" --output text)\naws s3 ls --profile pablo\n```',
+      realWorld: 'En una cuenta real sigue el mismo orden: **leer el mensaje de error → simulador → CloudTrail → corregir**. Con CloudTrail activo (como en **aws-secure-infrastructure**) sabes quién y cuándo cambió el permiso. Añade también `aws iam get-account-authorization-details` para ver todo el árbol de permisos. **Limpieza:** nada cuesta dinero; borra el usuario y el grupo de prueba.',
+    },
+    {
+      id: 'l01-e4',
+      title: 'Roles entre cuentas: ExternalId y MFA',
+      summary: 'Un rol para un proveedor externo con ExternalId y un rol de administración que exige MFA.',
+      difficulty: 'Difícil',
+      minutes: 25,
+      saa: [SAA_DOMAINS[1]],
+      tags: ['IAM', 'STS', 'Roles', 'MFA'],
+      scenario: 'Un proveedor de auditoría necesita **leer** tu cuenta. En vez de darle un usuario, creas el rol `auditor-externo`, que solo puede asumirse presentando un **ExternalId** (para que otro cliente del proveedor no pueda usar tu rol sin permiso). Además creas `admin-mfa`, un rol de administración que solo se asume **con MFA**. *(En el laboratorio, la «cuenta del proveedor» es la tuya.)*',
+      steps: [
+        { id: 'r1', title: 'Crea el rol `auditor-externo` cuya confianza exija `sts:ExternalId`', hint: ['La confianza va en `--assume-role-policy-document`, con `Principal` = `arn:aws:iam::<cuenta>:root` y `Condition` `StringEquals` sobre `sts:ExternalId`.'], check: (c) => (c.role('auditor-externo') && /sts:externalid/i.test(JSON.stringify(c.role('auditor-externo')!.assumeRolePolicy))) || 'Falta el rol auditor-externo con condición de ExternalId.' },
+        { id: 'p1', title: 'Dale permisos de solo lectura: adjunta `ReadOnlyAccess`', check: (c) => c.roleHas('auditor-externo', 'ReadOnlyAccess') || 'El rol no tiene ReadOnlyAccess.' },
+        { id: 'no', title: 'Intenta asumirlo **sin** ExternalId y comprueba que se deniega', check: (c) => c.trail('AssumeRole', { error: 'AccessDenied' }).some((e) => String(e.requestParameters?.RoleArn).endsWith('/auditor-externo')) || 'Aún no has visto el AccessDenied al asumir sin ExternalId.' },
+        { id: 'si', title: 'Asúmelo **con** `--external-id`, exporta las credenciales y ejecuta `aws sts get-caller-identity`', hint: ['Guarda la salida en una variable y extrae los tres valores con `jq -r`.', 'export AWS_ACCESS_KEY_ID=… AWS_SECRET_ACCESS_KEY=… AWS_SESSION_TOKEN=…'], check: (c) => c.trail('GetCallerIdentity').some((e) => e.principalArn.includes('assumed-role/auditor-externo/')) || 'Aún no has usado las credenciales del rol (get-caller-identity debe mostrar assumed-role/auditor-externo).' },
+        { id: 'back', title: 'Vuelve a tu identidad: `unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN`', detail: 'Mientras las variables estén exportadas, todos tus comandos van como el auditor (solo lectura).', check: (c) => c.ran(/unset\s+AWS_ACCESS_KEY_ID/) || 'Borra las variables de sesión para volver a ser tú.' },
+        { id: 'r2', title: 'Crea el rol `admin-mfa` con `AdministratorAccess` y confianza que exija `aws:MultiFactorAuthPresent`', hint: ['`"Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}`'], check: (c) => (c.role('admin-mfa') && /multifactorauthpresent/i.test(JSON.stringify(c.role('admin-mfa')!.assumeRolePolicy)) && c.roleHas('admin-mfa', 'AdministratorAccess')) || 'Falta el rol admin-mfa con MFA y AdministratorAccess.' },
+        { id: 'mfa', title: 'Registra un dispositivo MFA para tu usuario (`iam enable-mfa-device`)', check: (c) => (c.user(c.s.me.userName)?.mfaDevices.length ?? 0) > 0 || 'Tu usuario aún no tiene MFA registrado.' },
+        { id: 'amfa', title: 'Asume `admin-mfa` con `--serial-number` y `--token-code`; sin ellos debe fallar', check: (c) => (c.trail('AssumeRole', { error: 'AccessDenied' }).some((e) => String(e.requestParameters?.RoleArn).endsWith('/admin-mfa')) && c.trail('AssumeRole', { error: false }).some((e) => String(e.requestParameters?.RoleArn).endsWith('/admin-mfa'))) || 'Necesitas un intento denegado (sin MFA) y uno correcto (con MFA) sobre admin-mfa.' },
+      ],
+      script: [
+        ACC,
+        `aws iam create-role --role-name auditor-externo --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::'$ACC':root"},"Action":"sts:AssumeRole","Condition":{"StringEquals":{"sts:ExternalId":"acme-7f3a"}}}]}'`,
+        'aws iam attach-role-policy --role-name auditor-externo --policy-arn arn:aws:iam::aws:policy/ReadOnlyAccess',
+        'aws sts assume-role --role-arn arn:aws:iam::$ACC:role/auditor-externo --role-session-name proveedor || echo "Denegado: falta el ExternalId"',
+        'CREDS=$(aws sts assume-role --role-arn arn:aws:iam::$ACC:role/auditor-externo --role-session-name proveedor --external-id acme-7f3a)',
+        'export AWS_ACCESS_KEY_ID=$(echo $CREDS | jq -r .Credentials.AccessKeyId)',
+        'export AWS_SECRET_ACCESS_KEY=$(echo $CREDS | jq -r .Credentials.SecretAccessKey)',
+        'export AWS_SESSION_TOKEN=$(echo $CREDS | jq -r .Credentials.SessionToken)',
+        'aws sts get-caller-identity',
+        'unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN',
+        `aws iam create-role --role-name admin-mfa --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::'$ACC':root"},"Action":"sts:AssumeRole","Condition":{"Bool":{"aws:MultiFactorAuthPresent":"true"}}}]}'`,
+        'aws iam attach-role-policy --role-name admin-mfa --policy-arn arn:aws:iam::aws:policy/AdministratorAccess',
+        'aws sts assume-role --role-arn arn:aws:iam::$ACC:role/admin-mfa --role-session-name sin-mfa || echo "Denegado: falta MFA"',
+        'aws iam enable-mfa-device --user-name $USER --serial-number arn:aws:iam::$ACC:mfa/$USER --authentication-code1 123456 --authentication-code2 654321',
+        'aws sts assume-role --role-arn arn:aws:iam::$ACC:role/admin-mfa --role-session-name con-mfa --serial-number arn:aws:iam::$ACC:mfa/$USER --token-code 123456',
+      ],
+      realWorld: 'En una cuenta real el proveedor te da **su** ID de cuenta y un ExternalId único que tú pones en la confianza; nunca compartas el ExternalId entre clientes. Para MFA, primero se crea un dispositivo virtual (`aws iam create-virtual-mfa-device`) y se activa con dos códigos consecutivos de tu app autenticadora; el `--token-code` es el código de 6 dígitos del momento. En **aws-secure-infrastructure** tienes la misma idea: roles con confianza acotada y sin claves de larga duración. **Limpieza:** `detach-role-policy` + `delete-role` de ambos roles y `deactivate-mfa-device` si lo registraste.',
+    },
+    {
+      id: 'l01-e5',
+      title: 'Límite de permisos para un desarrollador',
+      summary: 'Aunque sea administrador, dev1 solo puede hacer lo que permita su límite.',
+      difficulty: 'Difícil',
+      minutes: 20,
+      saa: [SAA_DOMAINS[1]],
+      tags: ['IAM', 'Permissions boundary', 'Delegación'],
+      scenario: 'Quieres que el equipo de desarrollo pueda crear sus propios recursos de **S3** y consultar **EC2**, pero nada más: ni IAM ni facturación. Aunque algún día alguien adjunte `AdministratorAccess` a un desarrollador, el **límite de permisos** debe impedir que se salga de ahí. Lo demostrarás con el usuario `dev1`.',
+      steps: [
+        { id: 'pol', title: 'Crea la política `LimiteDev` que permita `s3:*` y `ec2:Describe*` (y nada más)', check: (c) => { const sts = c.statements('LimiteDev'); if (!sts.length) return 'Falta la política LimiteDev.'; return (c.stmtCovers(sts, 'Allow', 's3:PutObject') && c.stmtCovers(sts, 'Allow', 'ec2:DescribeInstances') && !c.stmtCovers(sts, 'Allow', 'iam:ListUsers')) || 'LimiteDev debe permitir S3 y las consultas de EC2, pero no IAM.'; } },
+        { id: 'usr', title: 'Crea `dev1` con `--permissions-boundary` apuntando a esa política', hint: ['aws iam create-user --user-name dev1 --permissions-boundary arn:aws:iam::<cuenta>:policy/LimiteDev'], check: (c) => String(c.user('dev1')?.permissionsBoundary ?? '').endsWith('/LimiteDev') || 'dev1 no existe o no tiene el límite LimiteDev.' },
+        { id: 'adm', title: 'Dale `AdministratorAccess` (sí, administrador)', check: (c) => c.userHas('dev1', 'AdministratorAccess') || 'dev1 no tiene AdministratorAccess.' },
+        { id: 'prof', title: 'Crea una clave de acceso para `dev1` y guárdala en el perfil `dev1`', hint: ['`aws iam create-access-key` y después tres `aws configure set … --profile dev1` (id, secreto y región).'], check: (c) => !!c.s.cli.profiles.dev1?.accessKeyId || 'El perfil dev1 aún no está configurado.' },
+        { id: 'ok', title: 'Con `--profile dev1`: `aws s3 ls` funciona…', check: (c) => c.trailBy('dev1', 'ListBuckets', { error: false }).length > 0 || 'Aún no has listado buckets como dev1.' },
+        { id: 'ko', title: '…y `aws iam list-users` se deniega a pesar de ser administrador', check: (c) => c.trailBy('dev1', 'ListUsers', { error: 'AccessDenied' }).length > 0 || 'Aún no has comprobado que el límite bloquea IAM.' },
+      ],
+      script: [
+        ACC,
+        `aws iam create-policy --policy-name LimiteDev --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:*","ec2:Describe*"],"Resource":"*"}]}'`,
+        'aws iam create-user --user-name dev1 --permissions-boundary arn:aws:iam::$ACC:policy/LimiteDev',
+        'aws iam attach-user-policy --user-name dev1 --policy-arn arn:aws:iam::aws:policy/AdministratorAccess',
+        'K=$(aws iam create-access-key --user-name dev1 --query AccessKey --output json)',
+        'aws configure set aws_access_key_id $(echo $K | jq -r .AccessKeyId) --profile dev1',
+        'aws configure set aws_secret_access_key $(echo $K | jq -r .SecretAccessKey) --profile dev1',
+        'aws configure set region eu-west-1 --profile dev1',
+        'aws s3 ls --profile dev1',
+        'aws iam list-users --profile dev1 || echo "Denegado por el límite de permisos"',
+      ],
+      realWorld: 'En una cuenta real el límite se usa para **delegar**: un rol de «administrador de equipo» solo puede crear usuarios y roles si les pone este límite (`iam:PermissionsBoundary` como condición). Permisos efectivos = intersección entre la política de identidad y el límite. **Limpieza:** borra la clave de acceso de `dev1` (`delete-access-key`), desvincula la política, `delete-user` y `delete-policy`.',
+    },
+    {
+      id: 'l01-e6',
+      title: 'Rota una clave de acceso sin cortar el servicio',
+      summary: 'Crea la segunda clave, desactiva la antigua y bórrala con seguridad.',
+      difficulty: 'Media',
+      minutes: 12,
+      saa: [SAA_DOMAINS[1]],
+      tags: ['IAM', 'Claves de acceso', 'Rotación'],
+      scenario: 'La auditoría ha detectado que la clave de acceso del usuario `servicio-etl` lleva **200 días** sin rotarse. Debes sustituirla sin dejar sin servicio a la aplicación: IAM permite **dos claves** por usuario precisamente para esto. Procedimiento: inspeccionar → crear la nueva → desactivar la vieja → borrarla.',
+      setup: async (sh) => {
+        await prep(sh, ['aws iam create-user --user-name servicio-etl', 'aws iam create-access-key --user-name servicio-etl']);
+        const u = sh.s.users.find((x) => x.name === 'servicio-etl')!;
+        u.accessKeys.forEach((k) => (k.createdAt = new Date(Date.now() - 200 * 86400000).toISOString()));
+      },
+      steps: [
+        { id: 'list', title: 'Inspecciona las claves de `servicio-etl` con `list-access-keys`', check: (c) => c.trail('ListAccessKeys').some((e) => e.requestParameters?.UserName === 'servicio-etl') || 'Aún no has listado las claves.' },
+        { id: 'new', title: 'Crea la segunda clave de acceso', hint: ['aws iam create-access-key --user-name servicio-etl'], check: (c) => c.trail('CreateAccessKey').some((e) => e.requestParameters?.UserName === 'servicio-etl') || 'Aún no has creado la clave nueva.' },
+        { id: 'off', title: 'Desactiva la clave antigua (`Inactive`) antes de borrarla', hint: ['Así, si algo dependía de ella, puedes reactivarla en segundos.', 'aws iam update-access-key --user-name servicio-etl --access-key-id <la antigua> --status Inactive'], check: (c) => c.trail('UpdateAccessKey').some((e) => e.requestParameters?.Status === 'Inactive') || 'Aún no has desactivado la clave antigua.' },
+        { id: 'del', title: 'Borra la clave antigua: debe quedar solo la nueva', check: (c) => { const ks = c.accessKeys('servicio-etl'); return (ks.length === 1 && Date.now() - Date.parse(ks[0].createdAt) < 86400000) || 'Debe quedar una única clave, la reciente.'; } },
+      ],
+      script: [
+        'OLD=$(aws iam list-access-keys --user-name servicio-etl --query \'AccessKeyMetadata[0].AccessKeyId\' --output text)',
+        'aws iam create-access-key --user-name servicio-etl',
+        'aws iam update-access-key --user-name servicio-etl --access-key-id $OLD --status Inactive',
+        'aws iam delete-access-key --user-name servicio-etl --access-key-id $OLD',
+        "aws iam list-access-keys --user-name servicio-etl --query 'AccessKeyMetadata[].[AccessKeyId,Status,CreateDate]' --output text",
+      ],
+      realWorld: 'En la cuenta real el informe de credenciales (`aws iam generate-credential-report`) te dice la antigüedad de cada clave. Entre el paso de crear la nueva y el de borrar la vieja hay que **actualizar la aplicación** (y esperar unos días con la antigua en `Inactive`). La mejor rotación es no tener claves: usa roles. **Limpieza:** borra el usuario de práctica y sus claves.',
+    },
+  ],
+  quiz: [
+    { domain: 1, q: 'Un usuario tiene una política con `Allow s3:*` y su grupo otra con `Deny s3:DeleteObject`. ¿Puede borrar objetos?', options: ['Sí, el Allow es más específico por usuario', 'No, un Deny explícito siempre prevalece', 'Solo si tiene MFA', 'Depende de cuál se creó antes'], answer: 1, explain: 'La evaluación es: Deny explícito > Allow > deny implícito. Un Deny en cualquier política aplicable gana.' },
+    { domain: 1, q: '¿Qué pasa cuando ninguna política menciona una acción?', options: ['Se permite si el usuario es administrador del grupo', 'Deny implícito: se rechaza', 'Error de sintaxis', 'Depende de la región'], answer: 1, explain: 'Todo está denegado por defecto (deny implícito); hace falta un Allow expreso.' },
+    { domain: 1, q: 'Una aplicación en una instancia EC2 necesita leer un bucket de S3. ¿Cuál es la forma más segura?', options: ['Guardar una clave de acceso en el código', 'Guardar la clave en un fichero de la instancia', 'Asociar un rol de IAM a la instancia mediante un perfil de instancia', 'Hacer público el bucket'], answer: 2, explain: 'Los roles de instancia entregan credenciales temporales que se renuevan solas; no hay secretos que filtrar.' },
+    { domain: 1, q: 'Un proveedor externo asumirá un rol en tu cuenta. ¿Qué evita el problema del «confused deputy»?', options: ['Dar al rol AdministratorAccess', 'Exigir un ExternalId en la política de confianza', 'Crear un usuario IAM para el proveedor', 'Activar CloudTrail'], answer: 1, explain: 'El ExternalId (sts:ExternalId) garantiza que el proveedor actúa en nombre de tu cuenta y no de otro cliente suyo.' },
+    { domain: 1, q: 'Quieres fijar un techo de permisos para los usuarios que crea un equipo delegado, aunque se les adjunte AdministratorAccess. ¿Qué usas?', options: ['Una SCP en la cuenta raíz del usuario', 'Un límite de permisos (permissions boundary)', 'Una política de bucket', 'Una ACL de red'], answer: 1, explain: 'El permissions boundary define el máximo; los permisos efectivos son la intersección con las políticas de identidad.' },
+    { domain: 1, q: '¿Cómo se rota una clave de acceso de un usuario sin interrumpir la aplicación?', options: ['Borrar la clave y crear otra enseguida', 'Crear una segunda clave, migrar la aplicación, desactivar la antigua y después borrarla', 'Cambiar la contraseña de la consola', 'Rotar solo el secreto manteniendo el ID'], answer: 1, explain: 'Cada usuario admite dos claves activas; eso permite una migración sin corte.' },
+    { domain: 1, q: 'Necesitas conocer quién adjuntó una política a un usuario ayer. ¿Dónde lo miras?', options: ['IAM Access Analyzer', 'AWS CloudTrail (eventos de gestión)', 'Amazon CloudWatch Logs de la instancia', 'AWS Config sin historial'], answer: 1, explain: 'CloudTrail registra las llamadas a la API (quién, cuándo, desde dónde), incluida AttachUserPolicy.' },
+    { domain: 1, q: 'Para que un rol de administración solo pueda asumirse con segundo factor, ¿qué condición pones en su política de confianza?', options: ['aws:SourceIp', 'aws:MultiFactorAuthPresent = true', 'aws:SecureTransport = true', 'aws:PrincipalOrgID'], answer: 1, explain: 'aws:MultiFactorAuthPresent es verdadera cuando la sesión se autenticó con MFA.' },
+  ],
+};
